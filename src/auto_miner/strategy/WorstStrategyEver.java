@@ -13,70 +13,57 @@ import java.util.stream.Collectors;
 public class WorstStrategyEver implements MinePlayerStrategy {
     private int maxCharge; // This value never changes
     private int boardSize; // 26 * 26 = 676
-    private HashMap<Point,TileType> tileTypePosition;
-    private List myRedMarket;
-    private List rechargeStation;
+    private HashMap tileFilterLocations;
+    private List<Point> myMarket;
+    private List<Point> rechargeStation;
+    private HashMap getFilterPoints4Mine;
+    private HashMap listMinePoints;
+
     @Override
     public void initialize(int boardSize, int maxInventorySize, int maxCharge, int winningScore, PlayerBoardView startingBoard, Point startTileLocation, boolean isRedPlayer, Random random) {
         this.maxCharge = maxCharge;
         this.boardSize = boardSize;
-        tileTypePosition = getPositionMines(startingBoard); // This is going to change
-        rechargeStation =  tileTypePosition.entrySet().stream().filter(recharge -> recharge.getValue().equals(TileType.RECHARGE)).collect(Collectors.toList());
-        myRedMarket = tileTypePosition.entrySet().stream().filter(market -> market.getValue().equals(TileType.RED_MARKET)).collect(Collectors.toList());
+        tileFilterLocations = getAllAvailableResources(startingBoard); // This is going to be changing every turn
+        rechargeStation = getLocationPoints(tileFilterLocations, TileType.RECHARGE);
+        myMarket = getLocationPoints(tileFilterLocations, isRedPlayer ? TileType.RED_MARKET : TileType.BLUE_MARKET);
+        listMinePoints = getJustMinePoints(tileFilterLocations);
+    }
+
+    private List getLocationPoints(HashMap<Point, TileType> tileFilterLocations, TileType tileType) {
+        return tileFilterLocations.entrySet().stream().filter(resource -> resource.getValue().equals(tileType)).collect(Collectors.toList());
+    }
+
+    private HashMap getJustMinePoints(HashMap<Point, TileType> tileFilterLocations) {
+        return tileFilterLocations.entrySet().stream()
+                .filter(str -> str.getValue().toString().startsWith("RESOURCE"))
+                // not sure if I can add a rule to compute the closest point(key)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (prev, next) -> next, HashMap::new));
     }
 
     @Override
     public TurnAction getTurnAction(PlayerBoardView boardView, Economy economy, int currentCharge, boolean isRedTurn) {
-        tileTypePosition = getPositionMines(boardView);
-        if (maxCharge == currentCharge) {
-//            System.out.println("1) [x: " + boardView.getYourLocation().x + ", y: " + boardView.getYourLocation().y + "]");
+        Point myCurrentLocation = boardView.getYourLocation();
+        // TODO start looking by the closest point
+        System.out.println(getJustMinePoints(tileFilterLocations));
+        Point closestMine = getClosestMine(getJustMinePoints(tileFilterLocations));
+        return null;
+    }
 
-            getPositionMines(boardView);
-            return TurnAction.MINE;
-        }
-
-//        Stream.of(boardView.getItemsOnGround().keySet().toArray()).forEach(System.out::println);
-//        System.out.println("isEmpty: " + boardView.getItemsOnGround().isEmpty());
-//        System.out.println("[x: " + boardView.getYourLocation().x + ", y: " + boardView.getYourLocation().y + "]");
-        Map map = boardView.getItemsOnGround();
-        if (!map.isEmpty()) {
-            boardView.getItemsOnGround().keySet().stream().forEach(System.out::println);
-        }
-
-
-        if (boardView.getYourLocation().x == 25) {
-            return TurnAction.MOVE_UP;
-        }
-
-        if (boardView.getYourLocation().y == 25) {
-            return TurnAction.MOVE_DOWN;
-        }
+    private Point getClosestMine(HashMap justMinePoints) {
         return null;
     }
 
 
-    public HashMap getPositionMines(PlayerBoardView boardView) {
+    public HashMap getAllAvailableResources(PlayerBoardView boardView) {
         HashMap<Point, TileType> list = new HashMap<>();
 
-        for (int x = 0; x < 26; x++) {
-            for (int y = 0; y < 26; y++) {
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
                 if (!boardView.getTileTypeAtLocation(x, y).equals(TileType.EMPTY)) {
                     list.put(new Point(x, y), boardView.getTileTypeAtLocation(x, y));
                 }
             }
         }
-
-        list.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(System.out::println);
-        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@2222");
-
-
-        System.out.println(rechargeStation +  "" + myRedMarket);
-        try {
-            Thread.sleep(40000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        System.exit(1);
         return list;
     }
 

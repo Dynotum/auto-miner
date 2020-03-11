@@ -38,7 +38,7 @@ public class AutoMinerMain {
         if (savedReplayFilePath == null) {
             // Not viewing a replay, play a game with a GUI instead
             MinePlayerStrategy redStrategy = new WorstStrategyEver(); // TODO: Replace this with your strategy
-            MinePlayerStrategy blueStrategy = new RandomStrategy();
+            MinePlayerStrategy blueStrategy = new FastAndFuriousStrategy(); //Lalo's
             long randomSeed = System.currentTimeMillis();
             gameEngine = new GameEngine(DEFAULT_BOARD_SIZE, redStrategy, blueStrategy, randomSeed);
             gameEngine.setGuiEnabled(true);
@@ -68,7 +68,7 @@ public class AutoMinerMain {
     private static double getStrategyWinPercent(MinePlayerStrategy yourStrategy, int boardSize) {
         final int numTotalRounds = 1000;
         int numRoundsWonByMinScore = 0;
-        MinePlayerStrategy randomStrategy = new RandomStrategy();
+        MinePlayerStrategy randomStrategy = new FastAndFuriousStrategy(); //Lalo's
 
         /*
          * TODO: Fill in the code here to play 1000 games and calculate your strategy's win percent
