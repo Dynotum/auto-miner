@@ -10,51 +10,82 @@ import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 public class WorstStrategyEver implements MinePlayerStrategy {
     private int maxCharge; // This value never changes
+    private boolean isRedPlayer;
     private int boardSize; // 26 * 26 = 676
-    private HashMap tileFilterLocations;
-    private List<Point> myMarket;
-    private List<Point> rechargeStation;
-    private HashMap getFilterPoints4Mine;
-    private HashMap listMinePoints;
+    private HashMap<Point, TileType> tileFilterLocations;
+    private List<Point> myMarket = new LinkedList<>();
+    private List<Point> rechargeStation = new LinkedList<>();
 
     @Override
     public void initialize(int boardSize, int maxInventorySize, int maxCharge, int winningScore, PlayerBoardView startingBoard, Point startTileLocation, boolean isRedPlayer, Random random) {
         this.maxCharge = maxCharge;
         this.boardSize = boardSize;
-        tileFilterLocations = getAllAvailableResources(startingBoard); // This is going to be changing every turn
-        rechargeStation = getLocationPoints(tileFilterLocations, TileType.RECHARGE);
-        myMarket = getLocationPoints(tileFilterLocations, isRedPlayer ? TileType.RED_MARKET : TileType.BLUE_MARKET);
-        listMinePoints = getJustMinePoints(tileFilterLocations);
+        this.isRedPlayer = isRedPlayer;
+        setBoardPoints(startingBoard);
     }
 
-    private List getLocationPoints(HashMap<Point, TileType> tileFilterLocations, TileType tileType) {
-        return tileFilterLocations.entrySet().stream().filter(resource -> resource.getValue().equals(tileType)).collect(Collectors.toList());
+    private Point getClosestMinePoint(PlayerBoardView boardView) {
+        Stack<Point> sortList = new Stack<>();
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
+                if (boardView.getTileTypeAtLocation(x, y).toString().startsWith("RESOURCE")) {
+                    sortList.add(new Point(x, y)); // ordenado de aqui
+                }
+            }
+        }
+
+        sortList = sortList.stream()
+                //                .sorted(Comparator.comparingInt(p -> p.getKey().x))
+                .sorted(Comparator.comparingDouble(p -> p.distance(boardView.getYourLocation())))
+                .collect(Collectors.toCollection(Stack::new));
+        System.out.println(sortList);
+
+        return sortList.firstElement();
     }
 
-    private HashMap getJustMinePoints(HashMap<Point, TileType> tileFilterLocations) {
-        return tileFilterLocations.entrySet().stream()
-                .filter(str -> str.getValue().toString().startsWith("RESOURCE"))
-                // not sure if I can add a rule to compute the closest point(key)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (prev, next) -> next, HashMap::new));
-    }
 
     @Override
     public TurnAction getTurnAction(PlayerBoardView boardView, Economy economy, int currentCharge, boolean isRedTurn) {
-        Point myCurrentLocation = boardView.getYourLocation();
         // TODO start looking by the closest point
-        System.out.println(getJustMinePoints(tileFilterLocations));
-        Point closestMine = getClosestMine(getJustMinePoints(tileFilterLocations));
+        System.out.println(getClosestMinePoint(boardView));
+        Point nextPoint = getClosestMinePoint(boardView);
+
+
+        try {
+            Thread.sleep(4000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+//        Point closestMine = getClosestMine(listMinePoints);
+        return walk(nextPoint, boardView);
+    }
+
+    private TurnAction walk(Point nextPoint, PlayerBoardView boardView) {
+        //   7,19               6,19
+        if (nextPoint.getX() > boardView.getYourLocation().getX()) {
+            System.out.println("next mayor");
+
+            return TurnAction.MOVE_RIGHT;
+        }
+        if (nextPoint.getX() == boardView.getYourLocation().getX()) {
+            //6,18                  6,19
+            if (nextPoint.getY() < boardView.getYourLocation().getY())
+                return TurnAction.MOVE_DOWN;
+        }
+        if (nextPoint.getX() < boardView.getYourLocation().getX()) {
+            System.out.println("next menor");
+            return TurnAction.MOVE_LEFT;
+        }
+
+
         return null;
     }
 
-    private Point getClosestMine(HashMap justMinePoints) {
-        return null;
-    }
 
-
-    public HashMap getAllAvailableResources(PlayerBoardView boardView) {
+    public HashMap<Point, TileType> getAllAvailableResources(PlayerBoardView boardView) {
         HashMap<Point, TileType> list = new HashMap<>();
 
         for (int x = 0; x < boardSize; x++) {
@@ -65,6 +96,21 @@ public class WorstStrategyEver implements MinePlayerStrategy {
             }
         }
         return list;
+    }
+
+    private void setBoardPoints(PlayerBoardView boardView) {
+        TileType tileType;
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
+                tileType = boardView.getTileTypeAtLocation(x, y);
+                if (tileType.equals(TileType.RECHARGE)) {
+                    rechargeStation.add(new Point(x, y));
+                }
+                if (tileType.equals(isRedPlayer ? TileType.RED_MARKET : TileType.BLUE_MARKET)) {
+                    myMarket.add(new Point(x, y));
+                }
+            }
+        }
     }
 
 
